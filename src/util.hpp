@@ -100,11 +100,13 @@ public:
 #endif
     }
 
-    static char *GetNow()
+    static std::string GetNow()
     {
         auto now = std::chrono::system_clock::now();
         auto tt = std::chrono::system_clock::to_time_t(now);
-        return ctime(&tt);  // ctime includes newline
+        std::stringstream ss;
+        ss << std::put_time(localtime(&tt), "%FT%T") << std::endl; // ctime includes newline
+        return ss.str();
     }
 
     void PrintElapsed(const std::string &name) const
