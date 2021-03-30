@@ -209,9 +209,7 @@ public:
 
             assert(id_len == kIdLen);
 
-            std::cout << std::endl
-                      << "Starting phase 1/4: Forward Propagation into tmp files... "
-                      << Timer::GetNow();
+            std::cout << std::endl << "==== BEGIN PHASE 1: Forward Propagation ====" << std::endl;
 
             Timer p1;
             Timer all_phases;
@@ -227,18 +225,19 @@ public:
                 stripe_size,
                 num_threads,
                 show_progress);
-            p1.PrintElapsed("Time for phase 1 =");
+            p1.PrintElapsed("Pha 1/4\t\t\t\tCompleted Forward Propagation");
+            std::cout << "==== END PHASE 1: Forward Propagation " << Timer::GetNow() << " ====" << std::endl << std::endl;
 
             uint64_t finalsize=0;
+
+            std::cout << "==== BEGIN PHASE 2: Back Propagation " << Timer::GetNow() << " ====" << std::endl;
 
             if(nobitfield)
             {
                 // Memory to be used for sorting and buffers
                 std::unique_ptr<uint8_t[]> memory(new uint8_t[memory_size + 7]);
 
-                std::cout << std::endl
-                      << "Starting phase 2/4: Backpropagation without bitfield into tmp files... "
-                      << Timer::GetNow();
+                std::cout << "Pha 2/4\t\t\t\tStarted backpropagation into tmp files. (bitfield: 1)" << std::endl;
 
                 Timer p2;
                 std::vector<uint64_t> backprop_table_sizes = b17RunPhase2(
@@ -253,14 +252,14 @@ public:
                     num_buckets,
                     log_num_buckets,
                     show_progress);
-                p2.PrintElapsed("Time for phase 2 =");
+                p2.PrintElapsed("Pha 2/4\t\t\t\tComplete.");
 
                 // Now we open a new file, where the final contents of the plot will be stored.
                 uint32_t header_size = WriteHeader(tmp2_disk, k, id, memo, memo_len);
+                std::cout << "Pha 3/4\t\t\t\t" << "Wrote: " << header_size << std::endl;
 
-                std::cout << std::endl
-                      << "Starting phase 3/4: Compression without bitfield from tmp files into " << tmp_2_filename
-                      << " ... " << Timer::GetNow();
+                std::cout << "Pha 3/4\t\t\t\tBegin compression from tmp files "
+                          << "(bitfield: false, dest: " << tmp_2_filename << ")" << std::endl;
                 Timer p3;
                 b17Phase3Results res = b17RunPhase3(
                     memory.get(),
@@ -278,18 +277,14 @@ public:
                     show_progress);
                 p3.PrintElapsed("Time for phase 3 =");
 
-                std::cout << std::endl
-                      << "Starting phase 4/4: Write Checkpoint tables into " << tmp_2_filename
-                      << " ... " << Timer::GetNow();
+                std::cout << "Pha 4/4\t\t\t\tStarted. Write checkpoint tables (dest: " << tmp_2_filename << ")" << std::endl;
                 Timer p4;
                 b17RunPhase4(k, k + 1, tmp2_disk, res, show_progress, 16);
-                p4.PrintElapsed("Time for phase 4 =");
+                p4.PrintElapsed("Pha 4/4\t\t\t\tComplete.");
                 finalsize = res.final_table_begin_pointers[11];
             }
             else {
-                std::cout << std::endl
-                      << "Starting phase 2/4: Backpropagation into tmp files... "
-                      << Timer::GetNow();
+                std::cout << "Pha 2/4\t\t\t\tStarted backpropagation into tmp files. (bitfield: 0)" << std::endl;
 
                 Timer p2;
                 Phase2Results res2 = RunPhase2(
@@ -303,14 +298,18 @@ public:
                     num_buckets,
                     log_num_buckets,
                     show_progress);
-                p2.PrintElapsed("Time for phase 2 =");
+                p2.PrintElapsed("Pha 2/4\t\t\t\tComplete.");
+                std::cout << "==== END PHASE 2: Backropagation ====" << std::endl << std::endl;
+
+
+                std::cout << "==== BEGIN PHASE 3: Something something ====" << std::endl;
+
 
                 // Now we open a new file, where the final contents of the plot will be stored.
                 uint32_t header_size = WriteHeader(tmp2_disk, k, id, memo, memo_len);
 
-                std::cout << std::endl
-                      << "Starting phase 3/4: Compression from tmp files into " << tmp_2_filename
-                      << " ... " << Timer::GetNow();
+                std::cout << "Pha 3/4\t\t\t\t\t Started. Compression from tmp to tmp2." 
+                          << "(dest: " << tmp_2_filename << ")" << std::endl;
                 Timer p3;
                 Phase3Results res = RunPhase3(
                     k,
@@ -324,14 +323,12 @@ public:
                     num_buckets,
                     log_num_buckets,
                     show_progress);
-                p3.PrintElapsed("Time for phase 3 =");
+                p3.PrintElapsed("Pha 3/4\t\t\t\tComplete.");
 
-                std::cout << std::endl
-                      << "Starting phase 4/4: Write Checkpoint tables into " << tmp_2_filename
-                      << " ... " << Timer::GetNow();
+                std::cout << "Pha 4/4\t\t\t\tStarted. Write checkpoint tables. (dest: " << tmp_2_filename << ")" << std::endl;
                 Timer p4;
                 RunPhase4(k, k + 1, tmp2_disk, res, show_progress, 16);
-                p4.PrintElapsed("Time for phase 4 =");
+                p4.PrintElapsed("Pha 4/4\t\t\t\tPhase 4 Complete.");
                 finalsize = res.final_table_begin_pointers[11];
             }
 
@@ -344,21 +341,22 @@ public:
             for (size_t i = 1; i <= 7; i++) {
                 total_working_space += table_sizes[i] * EntrySizes::GetMaxEntrySize(k, i, false);
             }
-            std::cout << "Approximate working space used (without final file): "
+            std::cout << "Finalize: Approximate working space used (without final file): "
                       << static_cast<double>(total_working_space) / (1024 * 1024 * 1024) << " GiB"
                       << std::endl;
 
-            std::cout << "Final File size: "
+            std::cout << "Finalize: File size: "
                       << static_cast<double>(finalsize) /
                              (1024 * 1024 * 1024)
                       << " GiB" << std::endl;
-            all_phases.PrintElapsed("Total time =");
+            all_phases.PrintElapsed("Finalize: Process complete.");
         }
 
         std::cin.tie(prevstr);
         std::ios_base::sync_with_stdio(true);
 
         for (fs::path p : tmp_1_filenames) {
+            std::cout << "SOMETHING_002 " << "Finalize: Cleaning up temporary files." << std::endl;
             fs::remove(p);
         }
 
@@ -374,7 +372,8 @@ public:
                               << std::endl;
                 } else {
                     bRenamed = true;
-                    std::cout << "Renamed final file from " << tmp_2_filename << " to "
+                    std::cout << "SOMETHING_004 " 
+                              << "Renamed final file from " << tmp_2_filename << " to "
                               << final_filename << std::endl;
                 }
             } else {
@@ -382,27 +381,32 @@ public:
                     fs::copy(
                         tmp_2_filename, final_2_filename, fs::copy_options::overwrite_existing, ec);
                     if (ec.value() != 0) {
-                        std::cout << "Could not copy " << tmp_2_filename << " to "
+                        std::cout << "SOMETHING_005 " 
+                                  << "Could not copy " << tmp_2_filename << " to "
                                   << final_2_filename << ". Error " << ec.message()
                                   << ". Retrying in five minutes." << std::endl;
                     } else {
-                        std::cout << "Copied final file from " << tmp_2_filename << " to "
+                        std::cout << "SOMETHING_006 " 
+                                  << "Copied final file from " << tmp_2_filename << " to "
                                   << final_2_filename << std::endl;
                         bCopied = true;
 
                         bool removed_2 = fs::remove(tmp_2_filename);
-                        std::cout << "Removed temp2 file " << tmp_2_filename << "? " << removed_2
+                        std::cout << "SOMETHING_007 " 
+                                  << "Removed temp2 file " << tmp_2_filename << "? " << removed_2
                                   << std::endl;
                     }
                 }
                 if (bCopied && (!bRenamed)) {
                     fs::rename(final_2_filename, final_filename, ec);
                     if (ec.value() != 0) {
-                        std::cout << "Could not rename " << tmp_2_filename << " to "
+                        std::cout << "SOMETHING_008 " 
+                                  << "Could not rename " << tmp_2_filename << " to "
                                   << final_filename << ". Error " << ec.message()
                                   << ". Retrying in five minutes." << std::endl;
                     } else {
-                        std::cout << "Renamed final file from " << final_2_filename << " to "
+                        std::cout << "SOMETHING_009 " 
+                                  << "Renamed final file from " << final_2_filename << " to "
                                   << final_filename << std::endl;
                         bRenamed = true;
                     }
@@ -468,7 +472,6 @@ private:
 
         uint32_t bytes_written =
             header_text.size() + kIdLen + 1 + 2 + kFormatDescription.size() + 2 + memo_len + 10 * 8;
-        std::cout << "Wrote: " << bytes_written << std::endl;
         return bytes_written;
     }
 };

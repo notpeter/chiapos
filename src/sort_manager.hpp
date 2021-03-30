@@ -154,7 +154,8 @@ public:
         }
 
         while (position >= this->final_position_end) {
-            SortBucket();
+            std::string prefix = "Pha 3/4\tTbl ?&?\t";
+            SortBucket(prefix);
         }
         if (!(this->final_position_end > position)) {
             throw InvalidValueException("Position too large");
@@ -176,7 +177,7 @@ public:
             this->next_bucket_to_sort < buckets_.size());
     }
 
-    void TriggerNewBucket(uint64_t position)
+    void TriggerNewBucket(uint64_t position, const std::string &log_prefix)
     {
         if (!(position <= this->final_position_end)) {
             throw InvalidValueException("Triggering bucket too late");
@@ -198,7 +199,7 @@ public:
                 cache_size);
         }
 
-        SortBucket();
+        SortBucket(log_prefix);
         this->prev_bucket_position_start = position;
     }
 
@@ -260,7 +261,8 @@ private:
     std::unique_ptr<uint8_t[]> entry_buf_;
     strategy_t strategy_;
 
-    void SortBucket()
+    void SortBucket(const std::string &log_prefix)
+    // void SortBucket()
     {
         if (!memory_start_) {
             // we allocate the memory to sort the bucket in lazily. It'se freed
@@ -298,9 +300,11 @@ private:
         // (number of entries required * entry_size_) <= total memory available
         if (!force_quicksort &&
             Util::RoundSize(bucket_entries) * entry_size_ <= memory_size_) {
-            std::cout << "\tBucket " << bucket_i << " uniform sort. Ram: " << std::fixed
-                      << std::setprecision(3) << have_ram << "GiB, u_sort min: " << u_ram
-                      << "GiB, qs min: " << qs_ram << "GiB." << std::endl;
+            std::cout << log_prefix 
+                      << "Bkt " << bucket_i + 1 << "/" << buckets_.size() << "\tUSort. "
+                      << "(mem: " << std::fixed << std::setprecision(3) << have_ram << "GiB, "
+                      << "u_sort min: " << u_ram << "GiB, "
+                      << "qs min: " << qs_ram << "GiB)" << std::endl;
             UniformSort::SortToMemory(
                 b.underlying_file,
                 0,
@@ -312,10 +316,12 @@ private:
             // Are we in Compress phrase 1 (quicksort=1) or is it the last bucket (quicksort=2)?
             // Perform quicksort if so (SortInMemory algorithm won't always perform well), or if we
             // don't have enough memory for uniform sort
-            std::cout << "\tBucket " << bucket_i << " QS. Ram: " << std::fixed
-                      << std::setprecision(3) << have_ram << "GiB, u_sort min: " << u_ram
-                      << "GiB, qs min: " << qs_ram << "GiB. force_qs: " << force_quicksort
-                      << std::endl;
+            std::cout << log_prefix
+                      << "Bkt " << bucket_i + 1 << "/" << buckets_.size() << "\tQSort. "
+                      << "(mem: " << std::fixed << std::setprecision(3) << have_ram << "GiB, "
+                      << "u_sort min: " << u_ram << "GiB, "
+                      << "qs min: " << qs_ram << "GiB, " 
+                      << "force_qs: " << force_quicksort << ")" << std::endl;
             b.underlying_file.Read(0, memory_start_.get(), bucket_entries * entry_size_);
             QuickSort::Sort(memory_start_.get(), entry_size_, bucket_entries, begin_bits_ + log_num_buckets_);
         }

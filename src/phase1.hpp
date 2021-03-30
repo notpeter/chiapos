@@ -208,7 +208,8 @@ void* phase1_thread(THREADDATA* ptd)
             if (!first_thread) {
                 Sem::Wait(ptd->theirs);
             }
-            globals.L_sort_manager->TriggerNewBucket(left_reader);
+            std::string prefix = "Pha 1/4\tTbl " + std::to_string(table_index + 1) + "/7\t";
+            globals.L_sort_manager->TriggerNewBucket(left_reader, prefix);
         }
         if (!last_thread) {
             // Do not post if we are the last thread, because first thread has already
@@ -599,7 +600,7 @@ std::vector<uint64_t> RunPhase1(
     uint8_t const num_threads,
     bool const show_progress)
 {
-    std::cout << "Computing table 1" << std::endl;
+    std::cout << "Pha 1/4\tTbl 1/7\t\t\tStarted computing table." << std::endl;
     globals.stripe_size = stripe_size;
     globals.num_threads = num_threads;
     Timer f1_start_time;
@@ -636,7 +637,7 @@ std::vector<uint64_t> RunPhase1(
     }
 
     uint64_t prevtableentries = 1ULL << k;
-    f1_start_time.PrintElapsed("F1 complete, time:");
+    f1_start_time.PrintElapsed("Pha 1/4\tTbl 1/7\t\t\tFinished computing table.");
     globals.L_sort_manager->FlushCache();
     table_sizes[1] = x + 1;
 
@@ -655,7 +656,8 @@ std::vector<uint64_t> RunPhase1(
         uint32_t const compressed_entry_size_bytes = EntrySizes::GetMaxEntrySize(k, table_index, false);
         right_entry_size_bytes = EntrySizes::GetMaxEntrySize(k, table_index + 1, true);
 
-        std::cout << "Computing table " << int{table_index + 1} << std::endl;
+        std::cout << "Pha 1/4\tTbl " << int{table_index + 1} << "/7\t\t\t"
+                  << "Computing table " << int{table_index + 1} << "." << std::endl;
         // Start of parallel execution
 
         FxCalculator f(k, table_index + 1);  // dummy to load static table
@@ -676,7 +678,8 @@ std::vector<uint64_t> RunPhase1(
             0,
             globals.stripe_size);
 
-        globals.L_sort_manager->TriggerNewBucket(0);
+        std::string prefix = "Pha 1/4\tTbl " + std::to_string(table_index + 1) + "/7\t";
+        globals.L_sort_manager->TriggerNewBucket(0, prefix);
 
         Timer computation_pass_timer;
 
@@ -718,8 +721,6 @@ std::vector<uint64_t> RunPhase1(
 
         // end of parallel execution
 
-        // Total matches found in the left table
-        std::cout << "\tTotal matches: " << globals.matches << std::endl;
 
         table_sizes[table_index] = globals.left_writer_count;
         table_sizes[table_index + 1] = globals.right_writer_count;
@@ -743,7 +744,12 @@ std::vector<uint64_t> RunPhase1(
         }
 
         prevtableentries = globals.right_writer_count;
-        table_timer.PrintElapsed("Forward propagation table time:");
+        // Total matches found in the left table
+        std::stringstream msg;
+        msg << "Pha 1/4\tTbl " << table_index + 1 << "/7\t\t\t"
+            << "Sorted table. " << globals.matches << " matches.";
+
+        table_timer.PrintElapsed(msg.str());
         if (show_progress) {
             progress(1, table_index, 6);
         }

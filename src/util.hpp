@@ -105,7 +105,7 @@ public:
         auto now = std::chrono::system_clock::now();
         auto tt = std::chrono::system_clock::to_time_t(now);
         std::stringstream ss;
-        ss << std::put_time(localtime(&tt), "%FT%T") << std::endl; // ctime includes newline
+        ss << std::put_time(localtime(&tt), "%FT%T");
         return ss.str();
     }
 
@@ -137,8 +137,8 @@ public:
 
         double cpu_ratio = static_cast<int>(10000 * (cpu_time_ms / wall_clock_ms)) / 100.0;
 
-        std::cout << name << " " << (wall_clock_ms / 1000.0) << " seconds. CPU (" << cpu_ratio
-                  << "%) " << Timer::GetNow();
+        std::cout << name << " (time: " << (wall_clock_ms / 1000.0) << "s, "
+                  << "CPU: " << cpu_ratio << "%)" << std::endl;
     }
 
 private:
